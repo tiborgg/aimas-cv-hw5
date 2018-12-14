@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+      "sourceMap": false,
+    "module": "commonjs",
+    "target": "es6",
+    "jsx": "react",
+    "importHelpers": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "baseUrl": ".",
+    "paths": {
+        "~/*": [
+            "./src/*"
+        ],
+        "@/*": [
+            "../*"
+        ]
+    }
+  }
+}
