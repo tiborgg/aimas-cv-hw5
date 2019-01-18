@@ -1,5 +1,5 @@
-# Computer Vision - Homework 5 - Straight line / rectangle detection
-**Unfinished!** This demo contains a partially working line detection algorithm based on ideas found in a 2006 paper named "A straight line detection using principal component analysis" by Yun-Seok Lee et al. (https://www.sciencedirect.com/science/article/abs/pii/S0167865506001383). I only got to the edge labeling part using column, row, cross and single primitives, but couldn't finish the PCA step.
+# Straight line / rectangle detection (Homework 5) for Computer Vision course (Unfinished)
+This demo contains a partially working line detection algorithm based on ideas found in a 2006 paper named "A straight line detection using principal component analysis" by Yun-Seok Lee et al. (https://www.sciencedirect.com/science/article/abs/pii/S0167865506001383). I only got to the edge labeling part using column, row, cross and single primitives, but couldn't finish the PCA step.
 
 The demo only renders line segments detected using column and row primitives, and I used a simple min/max hack to have something to render based on the detected structures.
 
