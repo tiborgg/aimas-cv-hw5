@@ -1,5 +1,5 @@
 {
-  "name": "cv-hw1",
+  "name": "aimas-cv-hw5",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,7 +11,9 @@
   "license": "ISC",
   "dependencies": {
     "assert": "^1.4.1",
+    "d3-delaunay": "^4.1.5",
     "lodash": "^4.17.11",
+    "mathjs": "^5.4.1",
     "mobx": "^5.5.2",
     "mobx-react": "^5.3.6",
     "react": "^16.6.0",
@@ -20,7 +22,9 @@
     "typescript": "^3.1.3"
   },
   "devDependencies": {
+    "@types/d3-delaunay": "^4.1.0",
     "@types/lodash": "^4.14.117",
+    "@types/mathjs": "^4.4.4",
     "@types/react": "^16.4.18",
     "@types/react-dom": "^16.0.9",
     "less": "^3.8.1",

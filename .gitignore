@@ -44,7 +44,6 @@ typings.json
 
 # Build folder
 build
-dist
 
 .cache
 .files

@@ -144,138 +144,200 @@ export function applyLineDetectorUint8ClampedRgba(
                 else if ( col && row )
                     marks[ i ] = M_CROSS; // cross
             }
+
+            if ( x === 321 && y === 58 ) {
+                console.log( marks[ i ] );
+            }
         }
     }
 
     // connect the edge segments using connected components algorithm
     // use a 2x2 kernel to link together edge segments
 
-    let label = 1;
-    let labels = new Uint32Array( size );
-    labels.fill( 0 );
+    abstract class LineBuilder {
 
-    let equiv = new Map<number, number>();
+        currentLabel = 1;
+        labels = new Uint32Array( size );
+        labelEquiv = new Map<number, number>();
 
-    const tryLink = ( ai, bi ) => {
+        link( ai, bi ) {
 
-        let am = marks[ ai ];
-        let bm = marks[ bi ];
+            const {
+                labels,
+                labelEquiv
+            } = this;
 
-        let alabel = labels[ ai ];
-        let blabel = labels[ bi ];
+            // performs the actual link between 2 pixels, 
+            let alabel = labels[ ai ];
+            let blabel = labels[ bi ];
 
-        // check if either is a cross pixel
-        let across = am === M_CROSS;
-        let bcross = bm === M_CROSS;
+            if ( !alabel && !blabel ) {
+                // assign new label and register reflexive equivalence
+                let newLabel = this.currentLabel++;
+                labelEquiv.set( newLabel, newLabel );
+                labels[ ai ] = newLabel;
+                labels[ bi ] = newLabel;
+            }
 
-        const reject = () => {
-            return false;
-        }
+            else if ( alabel && blabel ) {
+                // both pixels already have a label
+                // if they are not equal, we register an equivalence
+                // if they're equal, we don't need to do anything
+                if ( alabel !== blabel ) {
+                    let minLabel = Math.min( alabel, blabel );
+                    let maxLabel = Math.max( alabel, blabel );
+                    labelEquiv.set( maxLabel, minLabel );
+                }
+            }
 
-        if ( !am || !bm )
-            return reject(); // black pixels
+            else if ( alabel ) {
+                // only a has a label, assign the same label to b
+                labels[ bi ] = alabel;
+            }
 
-        if (
-            ( am === M_ROW && bm === M_COLUMN ) ||
-            ( am === M_COLUMN && bm === M_ROW ) )
-            return reject(); // direct exclusion, a column and a row can't form a line
-
-        // TEMP exclude cross
-        if ( am === M_CROSS || bm === M_CROSS )
-            return reject();
-
-        if ( !alabel && !blabel ) {
-            // assign new label and register reflexive equivalence
-            let newLabel = label++;
-            equiv.set( newLabel, newLabel );
-            labels[ ai ] = newLabel;
-            labels[ bi ] = newLabel;
-        }
-
-        else if ( alabel && blabel ) {
-            // both pixels already have a label
-            // if they are not equal, we register an equivalence
-            // if they're equal, we don't need to do anything
-            if ( alabel !== blabel ) {
-                let minLabel = Math.min( alabel, blabel );
-                let maxLabel = Math.max( alabel, blabel );
-                equiv.set( maxLabel, minLabel );
+            else if ( blabel ) {
+                // only a has a label, assign the same label to a
+                labels[ ai ] = blabel;
             }
         }
 
-        else if ( alabel ) {
-            // only a has a label, assign the same label to b
-            labels[ bi ] = alabel;
+        label() {
+
+            for ( let y = 0; y < height - 1; y++ ) {
+                for ( let x = 0; x < width - 1; x++ ) {
+
+                    // indices
+                    let tli = y * width + x; //top-left
+                    let tri = tli + 1; // top-right
+                    let bli = ( y + 1 ) * width + x; // bottom-left
+                    let bri = bli + 1; // bottom-right
+
+                    // detect possible links
+                    this.tryLink( tli, tri );
+                    this.tryLink( tli, bli );
+                    this.tryLink( tli, bri );
+                    this.tryLink( tri, bli );
+                    // tryLink( tri, bri );
+                    // tryLink( bli, bri );
+                }
+            }
         }
 
-        else if ( blabel ) {
-            // only a has a label, assign the same label to a
-            labels[ ai ] = blabel;
+        build() {
+
+            let { currentLabel } = this;
+            const {
+                labels,
+                labelEquiv
+            } = this;
+
+            let lines = new Map<number, number[]>(); // (connected component label, pixel offset)
+
+            for ( let y = 0; y < height; y++ ) {
+                for ( let x = 0; x < width; x++ ) {
+
+                    let i = ( y * width + x );
+                    let label = labelEquiv.get( labels[ i ] );
+
+                    if ( !label )
+                        continue;
+
+                    labels[ i ] = label;
+
+                    let connLabelPixels = lines.get( label );
+                    if ( !lines.has( label ) ) {
+                        connLabelPixels = [];
+                        lines.set( label, connLabelPixels );
+                    }
+
+                    connLabelPixels.push( i );
+                }
+            }
+
+            // remove noise
+            for ( let l of lines ) {
+                let indices = l[ 1 ];
+                if ( indices.length < C_MIN_LINE_SIZE ) {
+                    indices.forEach( i => labels[ i ] = 0 );
+                    lines.delete( l[ 0 ] );
+                }
+            }
+
+            return lines;
         }
 
-        return true;
+        abstract tryLink( ai: number, bi: number ): void;
     }
 
-    for ( let y = 0; y < height - 1; y++ ) {
-        for ( let x = 0; x < width - 1; x++ ) {
+    class RowLineBuilder
+        extends LineBuilder {
 
-            // indices
-            let tli = y * width + x; //top-left
-            let tri = tli + 1; // top-right
-            let bli = ( y + 1 ) * width + x; // bottom-left
-            let bri = bli + 1; // bottom-right
+        tryLink( ai, bi ) {
+            let am = marks[ ai ];
+            let bm = marks[ bi ];
 
-            let ki = [
-                tli, tri,
-                bli, bri ];
+            if ( !am || !bm )
+                return false; // black pixels
 
-            // detect possible links
-            tryLink( tli, tri );
-            tryLink( tli, bli );
-            tryLink( tli, bri );
-            tryLink( tri, bli );
-            // tryLink( tri, bri );
-            // tryLink( bli, bri );
+            if ( am === M_COLUMN || bm === M_COLUMN )
+                return false;
+
+            this.link( ai, bi );
         }
     }
 
+    class ColLineBuilder
+        extends LineBuilder {
 
-    // correct the labels using the equivalence table
-    let lines = new Map<number, number[]>(); // (connected component label, pixel offset)
+        tryLink( ai, bi ) {
 
-    for ( let y = 0; y < height; y++ ) {
-        for ( let x = 0; x < width; x++ ) {
+            let ax = ix( ai );
+            let ay = iy( ai );
+            let bx = ix( bi );
+            let by = iy( bi );
 
-            let i = ( y * width + x );
-            let label = equiv.get( labels[ i ] );
+            let am = marks[ ai ];
+            let bm = marks[ bi ];
 
-            if ( !label )
-                continue;
+            let diag = Math.abs( ax - bx ) > 0 || Math.abs( ay - by ) > 0;
+            let row = ay === by;
+
+            if ( !am || !bm )
+                return false; // black pixels
+
+            if ( am === M_ROW || bm === M_ROW || row )
+                return false;
+
+            if (diag) {
+
+                // diagonal links are only allowed in 2 cases
+                // a. a diagonal link to another column edge, in which case we link without any additional checks
+                // b. one pixel noise, or a cross pixel, in which case we need to check
+
+
                 
-            labels[ i ] = label;
-
-            let connLabelPixels = lines.get( label );
-            if ( !lines.has( label ) ) {
-                connLabelPixels = [];
-                lines.set( label, connLabelPixels );
             }
 
-            connLabelPixels.push( i );
+            this.link( ai, bi );
         }
     }
 
 
-    // remove noise
-    for ( let l of lines ) {
-        let indices = l[ 1 ];
-        if ( indices.length < C_MIN_LINE_SIZE ) {
-            indices.forEach( i => labels[ i ] = 0 );
-            lines.delete( l[ 0 ] );
-        }
-    }
+    let rowLineBuilder = new RowLineBuilder();
+    rowLineBuilder.label();
+
+    let rowLines = rowLineBuilder.build();
+    let rowLabels = rowLineBuilder.labels;
+
+
+    let colLineBuilder = new ColLineBuilder();
+    colLineBuilder.label();
+
+    let colLines = colLineBuilder.build();
+    let colLabels = colLineBuilder.labels;
 
     // try to fit lines through all the initial edge pixels
-    Array.from( lines.values() ).forEach( indices => {
+    Array.from( rowLines.values() ).forEach( indices => {
 
         // TEMP: detect line equation by margins
         let min = _.min( indices );
@@ -288,21 +350,46 @@ export function applyLineDetectorUint8ClampedRgba(
 
         let vec = [ ymax - ymin, xmax - xmin ];
 
-        lineBuffer.push( { x1: xmin, y1: ymin, x2: xmax, y2: ymax } );
+        lineBuffer.push( { x1: xmin, y1: ymin, x2: xmax, y2: ymax, className: 'horizontal' } );
     } );
+
+
+    // try to fit lines through all the initial edge pixels
+    Array.from( colLines.values() ).forEach( indices => {
+
+        // TEMP: detect line equation by margins
+        let min = _.min( indices );
+        let max = _.max( indices );
+
+        let xmin = min % width;
+        let ymin = Math.floor( min / width );
+        let xmax = max % width;
+        let ymax = Math.floor( max / width );
+
+        let vec = [ ymax - ymin, xmax - xmin ];
+
+        lineBuffer.push( { x1: xmin, y1: ymin, x2: xmax, y2: ymax, className: 'vertical' } );
+    } );
+
+
+
+
 
     for ( let y = 1; y < height - 1; y++ ) {
         for ( let x = 1; x < width - 1; x++ ) {
 
             let i = y * width + x;
-            let c = labelColor( labels[ i ] );
+            let cr = labelColor( rowLabels[ i ] );
+            let cc = labelColor( colLabels[ i ] );
 
-            dstData[ i * 4 + 0 ] = c[ 0 ];
-            dstData[ i * 4 + 1 ] = c[ 1 ];
-            dstData[ i * 4 + 2 ] = c[ 2 ];
+            dstData[ i * 4 + 0 ] = ( cr[ 0 ] + cc[ 0 ] ) / 2;
+            dstData[ i * 4 + 1 ] = ( cr[ 1 ] + cc[ 1 ] ) / 2;
+            dstData[ i * 4 + 2 ] = ( cr[ 2 ] + cc[ 2 ] ) / 2;
             dstData[ i * 4 + 3 ] = 255;
         }
     }
+
+    //srcData.map( ( v, i ) => dstData[ i ] = v );
 
     //grayToRgba( edgeData, dstData );
 }

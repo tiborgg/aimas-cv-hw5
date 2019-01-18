@@ -11,10 +11,15 @@ import {
 } from '../line';
 
 const images = [
-    'img5.jpg',
     'img1.jpg',
     'img2.jpg',
-    '/stop2.jpg'
+    'img3.jpg',
+    'img4.jpg',
+    'img5.jpg',
+    'img6.jpg',
+    'img7.jpg',
+    'img8.jpg',
+    'img9.jpg',
 ];
 
 @observer
@@ -24,7 +29,15 @@ export class Hw5App extends React.Component {
     canvasContext: CanvasRenderingContext2D;
 
     @observable
-    lines: IObservableArray<{ x1: number, y1: number, x2: number, y2: number }> = observable.array();
+    lines: IObservableArray<{
+        x1: number,
+        y1: number,
+        x2: number,
+        y2: number,
+        className: string
+    }> = observable.array();
+
+    rectVoronoiPath: string = '';
 
     constructor( props ) {
         super( props );
@@ -61,15 +74,6 @@ export class Hw5App extends React.Component {
 
         return (
             <div id="app">
-                <aside id="sidebar">
-                    <div className="filter">
-                        <div className="heading">
-                            <h4>Stop sign filter</h4>
-                            <button onClick={this.handleLineDetectorButtonClick.bind( this )}>Detect lines</button>
-                        </div>
-                    </div>
-                </aside>
-
                 <main id="content">
                     <header id="header">
                         {images.map( url => (
@@ -80,18 +84,23 @@ export class Hw5App extends React.Component {
                     <div id="image">
                         <div id="imageInner">
                             <div id="canvasOuter">
+
                                 <canvas id="canvas" ref={ref => this.canvas = ref} />
                                 <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height}>
 
                                     {this.lines.map( ( line, i ) =>
-                                        <line className="line"
+                                        <line className={`line ${line.className}`}
                                             key={i}
                                             x1={line.x1}
                                             y1={line.y1}
                                             x2={line.x2}
                                             y2={line.y2} />
                                     )}
+
+                                    <path d={this.rectVoronoiPath} stroke="gray" strokeWidth="0.5" />
                                 </svg>
+
+                                <button onClick={this.handleLineDetectorButtonClick.bind( this )} className="apply-button">Detect lines</button>
                             </div>
                         </div>
                     </div>
@@ -215,9 +224,20 @@ export class Hw5App extends React.Component {
     }
 
     handleLineDetectorButtonClick() {
-        
+
         this.lines.clear();
         this.applyFilter(
             LineDetectorUint8ClampedRgba( this.lines ) );
+
+        // TEST voronoi partitioning on the detected lines
+        // const delaunay = Delaunay.from( this.lines.reduce( ( acc, curr ) => {
+        //     acc.push( [ curr.x1, curr.y1 ] )
+        //     acc.push( [ curr.x2, curr.y2 ] )
+        //     return acc;
+        // }, [] ) );
+
+        // const voronoi = delaunay.voronoi([0,0,this.canvas.width, this.canvas.height]);
+
+        // this.rectVoronoiPath = voronoi.render()
     }
 }

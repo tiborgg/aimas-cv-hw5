@@ -36,11 +36,14 @@ body { background: white; margin:0; padding:0; font-family: Poppins, sans-serif;
 #toolbar { height: 60px; background: #262734; }
 
 #image { flex:1; position:relative; background:#F2F3F8; }
-#imageInner { position:absolute; top:0; left:0; right:0; bottom:0; display: flex; align-items: center; justify-content: center; overflow:auto; 
+#imageInner { position:absolute; top:0; left:0; right:0; bottom:0; display: flex; align-items: flex-start; justify-content: center; overflow:auto; 
     .region { position:absolute; background: rgba(255,255,255,.4); border:2px solid rgba(255,255,255,.7); }
-    .line { stroke:blue; stroke-width:2; }
+    .line { stroke:green; stroke-width:2; }
+    .line.vertical { stroke: yellow; }
+    .rect-line { stroke-width:0.5; }
 }
 
-#canvasOuter { position:absolute; }
+#canvasOuter { position:absolute; margin-top:20px; margin-bottom:20px; }
 svg { position:absolute; top:0; left:0;  }
 #canvas.zoom { image-rendering: 'pixelated'; transform: scale(5); }
+#canvasOuter .apply-button { position:absolute; top:20px; left:20px; font-family: Poppins, sans-serif; cursor:pointer; background:#C7213B; color:white; height:52px; font-size:16px; padding: 0 30px; border-radius:4px; border:none; display:flex; align-content:center; }
